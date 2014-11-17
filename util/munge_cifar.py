@@ -18,6 +18,12 @@ def main():
             cv_image.save(os.path.join("data", "cifar-10-png", str(count) + ".png"))
             count += 1
 
+# Dict train or test, which contains X and y, where y is labels and X is images.
+def save(file_name, dict):
+    fi = open(file_name, 'rb')
+    cPickle.dump(dict, fi)
+    fi.close()
+
 def unpickle(file):
     fo = open(file, 'rb')
     dict = cPickle.load(fo)
