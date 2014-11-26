@@ -6,17 +6,21 @@ import cPickle
 
 def main():
     raw_data_path = os.path.join("data","cifar-10-batches-py")
+    munged_data_path = os.path.join("data", "cifar-10-image")
     data_files = [ f for f in os.listdir(raw_data_path) if os.path.isfile(os.path.join(raw_data_path,f)) and "_batch" in f ]
     data_files.sort()
     count = 1
-    for data_file in data_files[0:1]:
+    for data_file in data_files:
         image_package = unpickle(os.path.join(raw_data_path,data_file))
+        image_list = []
         for binary_image in image_package["data"]:
             print count
             formatted_image = munge(binary_image)
             cv_image = IC.Image(formatted_image)
-            cv_image.save(os.path.join("data", "cifar-10-png", str(count) + ".png"))
-            count += 1
+            image_list.append(cv_image)
+    #        cv_image.save(os.path.join("data", "cifar-10-png", str(count) + ".png"))
+            count += 1        
+        cPickle.dump((image_list, image_package["labels"]), open(os.path.join(munged_data_path, data_file),"wb")) #Save (X, y) tuple
 
 # Dict train or test, which contains X and y, where y is labels and X is images.
 def save(file_name, dict):
@@ -32,6 +36,7 @@ def unpickle(file):
 
 # We need to turn the CIFAR-10 format into a 3d matrix of size 32*32*3 so 
 # that we SimpleCV can open them with the "Image()" constructor.
+# Not worthwhile to try to understand this.
 def munge(cifar_image):
     #true = IC.Image('data/train/1.png')
     #true_array = true.getNumpy()[:,:,:]
