@@ -2,6 +2,7 @@
 import os
 import cPickle
 import time
+import math
 from SimpleCV import *
 from sklearn.svm import SVC
 from sklearn import cross_validation
@@ -45,11 +46,23 @@ def main(min_C = .0001, max_C = 1000, incrementor = 2, type = "raw", save = Fals
     models = []
     current_C = min_C
     kernels = ['linear', 'poly', 'rbf', 'sigmoid']
+    total_runs = int(math.log(max_C/min_C * len(kernels), incrementor))
+    current_run = 1
+    avg_elapsed = 0.0
     while (current_C <= max_C):
         for kernel in kernels:
+            start_time = time.time()
+            print "Starting run " + str(current_run) + " out of run " + str(total_runs) + " at time " + str(start_time)
             classifier = SVC(C = current_C, kernel = kernel)
             average_accuracy = np.mean(cross_validation.cross_val_score(classifier, X_train, y_train, cv = 5))
             models.append((current_C, kernel, classifier, average_accuracy))
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            avg_elapsed = ((current_run - 1) * avg_elapsed + elapsed_time) / current_run
+            print "Ending run " + str(current_run) + " out of run " + str(total_runs) + " at time " + str(end_time)
+            print "Elapsed time for this run was " + str(elapsed_time)
+            print "Average elapsed time for all runs is " + str(avg_elapsed)
+            current_run = current_run + 1
         current_C = current_C * incrementor
 
     models.sort(key = lambda x: x[3]) #WARNING: x[2] should correspond to average_accuracy of each model
