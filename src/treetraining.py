@@ -5,6 +5,7 @@ import time
 from SimpleCV import *
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import cross_validation
+import datetime
 
 algo = "tree" 
 
@@ -39,13 +40,14 @@ def load(type, feature):
     return X,y
 
 def main(max_depth = 20, type = "raw", save = False):
+    start_time = datetime.datetime.now()
     X_train, y_train = load("train", type)
     X_test, y_test = load("test", type)
 
     models = []
     for depth in xrange(1,max_depth):
         classifier = train(X_train, y_train, max_depth = depth)
-        average_accuracy = np.mean(cross_validation.cross_val_score(classifier, X_train, y_train, cv = 5))
+        average_accuracy = np.mean(cross_validation.cross_val_score(classifier, X_train, y_train, cv = 5, n_jobs = -1))
         models.append((depth, classifier, average_accuracy))
 
     models.sort(key = lambda x: x[2]) #WARNING: x[2] should correspond to average_accuracy of each model
@@ -54,8 +56,7 @@ def main(max_depth = 20, type = "raw", save = False):
     tuned_classifier = train(X_train, y_train, tuned_depth)
     accuracy = test(tuned_classifier, X_test, y_test)
     if save:
-        import datetime
-        cPickle.dump({"hypothesis" : tuned_classifier, "accuracy" : accuracy, "parameters" : {"depth" : tuned_depth}, "time" : datetime.datetime.now().time()}, open(os.path.join("results/", algo, type, type + ".p"), "wb"))
+        cPickle.dump({"hypothesis" : tuned_classifier, "accuracy" : accuracy, "parameters" : {"depth" : tuned_depth},"start_time" :start_time, "end_time" : datetime.datetime.now(), "total_time": datetime.datetime.now() - start_time}, open(os.path.join("results/", algo, type, type + ".p"), "wb"))
     return accuracy, tuned_classifier
 
 def train(X,y, max_depth):
