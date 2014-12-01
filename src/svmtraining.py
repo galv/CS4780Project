@@ -4,29 +4,32 @@ import cPickle
 import time
 import math
 from SimpleCV import *
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 from sklearn import cross_validation
+import numpy as np
 
 algo = "svm" 
 
 def run_all():
     features = ["edge", "hue", "haar"]
     for feature in features:
-        main(type = feature, save = True)
+        main(type = feature, incrementor = 10, save = True)
 
-def load(type, feature):
+def load(data, feature):
     """
     Return (X, y), where X is the list of images (SimpleCV Image), and y is 
     the list of classifications.
-    type: type of data: training or testing
+    data: type of data: training or testing
     """
     #Settings
-    train_path = os.path.join("data", type, feature) #put your image path here if you want to override current directory
+    train_path = os.path.join("data", data, feature) #put your image path here if you want to override current directory
 
     X = []
     y = []
     for f in os.listdir(train_path):
         (X_i, y_i) = cPickle.load(open(os.path.join(train_path,f), "rb"))
+        if type(X_i) is np.ndarray:
+            X_i = X_i.tolist()
         X = X + X_i #Append the two lists together
         y = y + y_i
     assert np.size(X,0) == 50000 or np.size(X,0) == 10000
@@ -39,37 +42,34 @@ def load(type, feature):
         X = map (lambda img: img.getNumpy().flatten(), X)
     return X,y
 
-def main(min_C = .0001, max_C = 1000, incrementor = 2, type = "raw", save = False):
+def main(min_C = .001, max_C = 100, incrementor = 10, type = "raw", save = False):
     X_train, y_train = load("train", type)
     X_test, y_test = load("test", type)
 
     models = []
     current_C = min_C
-    kernels = ['linear', 'poly', 'rbf', 'sigmoid']
-    total_runs = int(math.log(max_C/min_C * len(kernels), incrementor))
+    total_runs = int(math.log(max_C/min_C, incrementor))
     current_run = 1
     avg_elapsed = 0.0
     while (current_C <= max_C):
-        for kernel in kernels:
-            start_time = time.time()
-            print "Starting run " + str(current_run) + " out of run " + str(total_runs) + " at time " + str(start_time)
-            classifier = SVC(C = current_C, kernel = kernel)
-            average_accuracy = np.mean(cross_validation.cross_val_score(classifier, X_train, y_train, cv = 5))
-            models.append((current_C, kernel, classifier, average_accuracy))
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            avg_elapsed = ((current_run - 1) * avg_elapsed + elapsed_time) / current_run
-            print "Ending run " + str(current_run) + " out of run " + str(total_runs) + " at time " + str(end_time)
-            print "Elapsed time for this run was " + str(elapsed_time)
-            print "Average elapsed time for all runs is " + str(avg_elapsed)
-            current_run = current_run + 1
+        start_time = time.time()
+        print "Starting run " + str(current_run) + " out of run " + str(total_runs) + " at time " + str(start_time)
+        classifier = LinearSVC(C = current_C, dual = False)
+        average_accuracy = np.mean(cross_validation.cross_val_score(classifier, X_train, y_train, cv = 5, n_jobs = 15, pre_dispatch = 15))
+        models.append((current_C, classifier, average_accuracy))
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        avg_elapsed = ((current_run - 1) * avg_elapsed + elapsed_time) / current_run
+        print "Ending run " + str(current_run) + " out of run " + str(total_runs) + " at time " + str(end_time)
+        print "Elapsed time for this run was " + str(elapsed_time)
+        print "Average elapsed time for all runs is " + str(avg_elapsed)
+        current_run = current_run + 1
         current_C = current_C * incrementor
 
-    models.sort(key = lambda x: x[3]) #WARNING: x[2] should correspond to average_accuracy of each model
+    models.sort(key = lambda x: x[2]) #WARNING: x[2] should correspond to average_accuracy of each model
     #Retrain one last time with optimal parameters so we can use all data.
     tuned_C = models[-1][0]
-    tuned_kernel = models[-1][1]
-    tuned_classifier = SVC(kernel = tuned_kernel, C = tuned_C)
+    tuned_classifier = LinearSVC(C = tuned_C, dual = False)
     tuned_classifier.fit(X_train, y_train)
     accuracy = test(tuned_classifier, X_test, y_test)
     if save:

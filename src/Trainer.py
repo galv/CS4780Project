@@ -12,29 +12,31 @@ class Trainer(object):
     train_path = "data/train"
     test_path = "data/test"
     cv_path = "data/cross_validate"
+    clf = None
 
     Feature = Enum('Feature', 'edge blob raw') #haar
 
-    def main(feature = "raw"):
+    def main(self, feature = "raw"):
         #Train multiple models with different parameters.
         train_dicts = [f for f in os.listdir(os.path.join("data","train")) 
                        if path.isfile(f)]
-    
+        
         
     """
     
     """
-    def initialize_model(**kwargs):
+    @abc.abstractmethod
+    def initialize_model(self,**kwargs):
 
     """
     Trains the model clf on the training data set.
     """
-    def train(clf, X_train,y_train):
+    def train(self, X_train,y_train):
         
 
-    def test(clf, X_test, y_test):
+    def test(self, X_test, y_test):
 
     @abc.abstractmethod
-    def cross_validate(clf, X_cv, y_cv):
+    def cross_validate(self, X_cv, y_cv):
 
     
